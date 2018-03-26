@@ -33,17 +33,33 @@
 
 BLECharacteristic *pCharacteristic;
 
+typedef struct {
+  char power[2];
+  char pattern[16];
+} blefields_a;
+blefields_a blefields;
+
+
+class CharacteristicCallback5 : public BLECharacteristicCallbacks { // path
+  void onWrite(BLECharacteristic* pChar){
+    sprintf(blefields.power, "%s", pChar->getValue().c_str());
+  }
+};
+
+
 class FieldCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
       std::string rxValue = pCharacteristic->getValue();
-
+      String uuid2;
       if (rxValue.length() > 0) {
         std::string uuid = pCharacteristic->getUUID().toString();
+        Serial.print(uuid.c_str());
 
         Serial.println("*********");
         Serial.print("Received write for characteristic UUID: ");
         for (int i = 0; i < uuid.length(); i++) {
           Serial.print(uuid[i]);
+          uuid2+=uuid[i];
         }
         Serial.println();
         Serial.print("Value: ");
@@ -53,8 +69,9 @@ class FieldCallbacks: public BLECharacteristicCallbacks {
         }
 
         Serial.println();
-
+//      if (uuid)
         // Do stuff based on the command received from the app
+//        if(uuid=="
         if (rxValue.find("push") != -1) {
           Serial.println("Turning ON!");
              Serial.print(String(currentPatternIndex));
@@ -84,6 +101,7 @@ void setupBLE() {
   // Create the BLE Server
     BLEServer *pServer = BLEDevice::createServer();
   BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLEService* pService2 = pServer->createService("a8c27e11-bf97-40a5-8438-3631bb75a7e");
  FieldCallbacks *fieldCallbacks = new FieldCallbacks();
 
 for (uint8_t i = 0; i < fieldCount; i++) {
@@ -117,8 +135,15 @@ BLECharacteristic *pCharacteristic = pService->createCharacteristic(
 
     pCharacteristic->setValue(value.c_str());
   }
+BLECharacteristic* pCharacteristic5 = pService2->createCharacteristic(      // power
+      BLEUUID("a8c27e11-bf97-40a5-8438-3631bb75a7e"),
+      BLECharacteristic::PROPERTY_READ  |
+      BLECharacteristic::PROPERTY_WRITE
+    );
+    
+  pCharacteristic->addDescriptor(new BLE2902());
 
-
+pCharacteristic5->setValue(blefields.power);
    // Start the service
   pService->start();
 
